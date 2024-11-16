@@ -5,15 +5,8 @@ type SL struct {
 	HasSL bool
 }
 
-func (sl *SL) ValidateSL() error {
-
-	if err := sl.DL.ValidateDL(); err != nil {
-		return err
-	}
-
-	// Handle UnUpdatability Here:
-
-	return nil
+func (sl *SL) Validate() error {
+	return sl.DL.Validate()
 }
 
 func NewSL(code string, title string, hassl bool) (*SL, error) {
@@ -26,7 +19,7 @@ func NewSL(code string, title string, hassl bool) (*SL, error) {
 		HasSL: hassl,
 	}
 
-	if err := newsl.ValidateSL(); err != nil {
+	if err := newsl.Validate(); err != nil {
 		return nil, err
 	}
 
