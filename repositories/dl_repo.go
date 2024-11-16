@@ -28,6 +28,13 @@ func (dr *DLRepository) Create(code string, title string) error {
 	return nil
 }
 
+func (dr *DLRepository) Read(id int) (*models.DL, error) {
+	dl := &models.DL{}
+	result := dr.db.Model(&models.DL{}).First(dl, "id = ?", id)
+
+	return dl, result.Error
+}
+
 func (dr *DLRepository) ReadByCode(code string) (*models.DL, error) {
 	if err := models.ValidateString(code, "Code"); err != nil {
 		return nil, err
@@ -48,4 +55,31 @@ func (dr *DLRepository) ReadByTitle(title string) (*models.DL, error) {
 	result := dr.db.Model(&models.DL{}).First(dl, "title = ?", title)
 
 	return dl, result.Error
+}
+
+func (dr *DLRepository) Update(id uint, newDL *models.DL) error {
+	// 1- Check if newdl is valid:
+	if err := newDL.Validate(); err != nil {
+		return err
+	}
+
+	// 2- Check if There is a DL with such id in db:
+	dl := &models.DL{}
+	if result := dr.db.Model(&models.DL{}).First(dl, "id = ?", id); result.Error != nil {
+		return result.Error
+	}
+
+	// 3- Handle Row Version:
+	if dl.Version != newDL.Version {
+		return fmt.Errorf("version mismatch: expected %d but found %d", dl.Version, newDL.Version)
+	}
+
+	// 4- Update
+	newDL.ID = dl.ID
+	newDL.Version = dl.Version + 1
+	return dr.db.Model(&models.SL{}).Where("id = ?", id).Save(newDL).Error
+}
+
+func (dr *DLRepository) Delete(id uint) error {
+	return dr.db.Model(&models.DL{}).Delete("id = ?", id).Error
 }
