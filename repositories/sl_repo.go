@@ -63,7 +63,7 @@ func (dr *SLRepository) Update(id uint, newSL *models.SL) error {
 		return err
 	}
 
-	// 2- Check if There is a DL with such id in db:
+	// 2- Check if There is a SL with such id in db:
 	sl := &models.SL{}
 	if result := dr.db.Model(&models.SL{}).First(sl, "id = ?", id); result.Error != nil {
 		return result.Error
@@ -74,7 +74,19 @@ func (dr *SLRepository) Update(id uint, newSL *models.SL) error {
 		return fmt.Errorf("version mismatch: expected %d but found %d", sl.Version, newSL.Version)
 	}
 
-	// 4- Update
+	// 4- Check if there are any references to this sl:
+	var count int64
+	err := dr.db.Model(&models.Voucheritem{}).Where("sl_id = ?", sl.ID).Count(&count).Error
+	if err != nil {
+		return err
+	}
+
+	// If there are any references, raise an error
+	if count > 0 {
+		return fmt.Errorf("cannot update SL: it is referenced by %d Voucheritem(s)", count)
+	}
+
+	// 5- Update:
 	newSL.ID = sl.ID
 	newSL.Version = sl.Version + 1
 	return dr.db.Model(&models.SL{}).Where("id = ?", id).Save(newSL).Error
