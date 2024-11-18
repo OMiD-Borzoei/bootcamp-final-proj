@@ -3,6 +3,7 @@ package repositories
 import (
 	"Project/models"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -15,20 +16,20 @@ func NewDLRepository(db *gorm.DB) *DLRepository {
 	return &DLRepository{db: db}
 }
 
-func (dr *DLRepository) Create(code string, title string) error {
+func (dr *DLRepository) Create(code string, title string) (uint, error) {
 
 	dl, err := models.NewDL(code, title)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if err := dr.db.Create(dl).Error; err != nil {
-		return fmt.Errorf("could not create DL: %w", err)
+		return 0, fmt.Errorf("could not create DL: %w", err)
 	}
-	return nil
+	return dl.ID, nil
 }
 
-func (dr *DLRepository) Read(id int) (*models.DL, error) {
+func (dr *DLRepository) Read(id uint) (*models.DL, error) {
 	dl := &models.DL{}
 	result := dr.db.Model(&models.DL{}).First(dl, "id = ?", id)
 
@@ -81,5 +82,9 @@ func (dr *DLRepository) Update(id uint, newDL *models.DL) error {
 }
 
 func (dr *DLRepository) Delete(id uint) error {
-	return dr.db.Model(&models.DL{}).Delete("id = ?", id).Error
+	err := dr.db.Model(&models.DL{}).Delete("id = ?", id).Error
+	if err != nil && strings.Contains(err.Error(), "23503") {
+		return fmt.Errorf("can't delete DL with id = %d cz it is referenced", id)
+	}
+	return err
 }

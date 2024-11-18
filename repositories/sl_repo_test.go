@@ -34,12 +34,14 @@ func TestAllSLmethods(t *testing.T) {
 
 			t.Run("Should not Add SL with empty code", func(t *testing.T) {
 				code, title = "", fmt.Sprintf("%d", time.Now().UnixNano())
-				assert.NotNil(t, repo.Create(code, title, false))
+				_, err := repo.Create(code, title, false)
+				assert.NotNil(t, err)
 			})
 
 			t.Run("Should not Add SL with empty title", func(t *testing.T) {
 				code, title = fmt.Sprintf("%d", time.Now().UnixNano()), ""
-				assert.NotNil(t, repo.Create(code, title, false))
+				_, err := repo.Create(code, title, false)
+				assert.NotNil(t, err)
 			})
 
 			t.Run("Should not Add SL with a code that has more that 64 chars", func(t *testing.T) {
@@ -47,7 +49,8 @@ func TestAllSLmethods(t *testing.T) {
 				for range 65 {
 					code += "a"
 				}
-				assert.NotNil(t, repo.Create(code, title, false))
+				_, err := repo.Create(code, title, false)
+				assert.NotNil(t, err)
 			})
 
 			t.Run("Should not Add SL with a title that has more that 64 chars", func(t *testing.T) {
@@ -55,7 +58,8 @@ func TestAllSLmethods(t *testing.T) {
 				for range 65 {
 					title += "a"
 				}
-				assert.NotNil(t, repo.Create(code, title, false))
+				_, err := repo.Create(code, title, false)
+				assert.NotNil(t, err)
 			})
 
 			t.Run("Should be Able to add a SL with code that has 64 persian chars", func(t *testing.T) {
@@ -63,14 +67,15 @@ func TestAllSLmethods(t *testing.T) {
 				for range 64 - len(code) {
 					code += "م"
 				}
-				assert.Nil(t, repo.Create(code, title, true))
+				_, err := repo.Create(code, title, false)
+				assert.Nil(t, err)
 
 				// Check for correct insertion in database
 				SL := &models.SL{}
 				repo.db.Model(&models.SL{}).Last(SL)
 				assert.Equal(t, SL.Code, code)
 				assert.Equal(t, SL.Title, title)
-				assert.Equal(t, SL.HasDL, true)
+				assert.Equal(t, SL.HasDL, false)
 			})
 
 			t.Run("Should be Able to add a SL with title that has 64 persian chars", func(t *testing.T) {
@@ -78,7 +83,8 @@ func TestAllSLmethods(t *testing.T) {
 				for range 64 - len(title) {
 					title += "م"
 				}
-				assert.Nil(t, repo.Create(code, title, false))
+				_, err := repo.Create(code, title, false)
+				assert.Nil(t, err)
 
 				// Check for correct insertion in database
 				SL := &models.SL{}
@@ -91,19 +97,19 @@ func TestAllSLmethods(t *testing.T) {
 
 			t.Run("Shouldn't Add a SL with repetative code", func(t *testing.T) {
 				code, title = stamp("S001")
-				err := repo.Create(code, title, false)
+				_, err := repo.Create(code, title, false)
 				assert.Nil(t, err)
 
-				err = repo.Create(code, title+"new", false)
+				_, err = repo.Create(code, title+"new", false)
 				assert.NotNil(t, err)
 			})
 
 			t.Run("Shouldn't Add a SL with repetative title", func(t *testing.T) {
 				code, title = stamp("S002")
-				err := repo.Create(code, title, false)
+				_, err := repo.Create(code, title, false)
 				assert.Nil(t, err)
 
-				err = repo.Create(code+"new", title, false)
+				_, err = repo.Create(code+"new", title, false)
 				assert.NotNil(t, err)
 			})
 
@@ -234,6 +240,23 @@ func TestAllSLmethods(t *testing.T) {
 
 			})
 
+			t.Run("shouldnt update a SL that is refernced", func(t *testing.T) {
+				sl1_id, sl2_id, dl_id, v_id := scenario1(repo.db)
+
+				code, title = stamp("")
+				validsl := &models.SL{
+					DL: models.DL{
+						Code:  code,
+						Title: title,
+					},
+				}
+
+				assert.NotNil(t, repo.Update(sl1_id, validsl))
+				assert.NotNil(t, repo.Update(sl2_id, validsl))
+
+				revert_scenario1(repo.db, sl1_id, sl2_id, dl_id, v_id)
+			})
+
 			t.Run("Row Versioning", func(t *testing.T) {
 				code, title = stamp("S003-Updated-Twice")
 				newSL := &models.SL{
@@ -325,6 +348,14 @@ func TestAllSLmethods(t *testing.T) {
 				assert.NotNil(t, err)
 			})
 
+			t.Run("Shouldnt Delete a DL that is referenced by a VI", func(t *testing.T) {
+				sl1_id, sl2_id, dl_id, v_id := scenario1(repo.db)
+
+				assert.NotNil(t, repo.Delete(sl1_id))
+				assert.NotNil(t, repo.Delete(sl2_id))
+
+				revert_scenario1(repo.db, sl1_id, sl2_id, dl_id, v_id)
+			})
 		})
 	})
 }

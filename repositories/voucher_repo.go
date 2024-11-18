@@ -16,10 +16,10 @@ func NewVoucherRepository(db *gorm.DB) *VoucherRepository {
 	return &VoucherRepository{db: db}
 }
 
-func (dr *VoucherRepository) Create(v *models.Voucher) error {
+func (dr *VoucherRepository) Create(v *models.Voucher) (uint, error) {
 	// 1- Validate the voucher itself first:
 	if err := v.Validate(); err != nil {
-		return err
+		return 0, err
 	}
 
 	// 2- make an empty voucher with the given number and insert it in db:
@@ -27,21 +27,21 @@ func (dr *VoucherRepository) Create(v *models.Voucher) error {
 		Number: v.Number,
 	}
 	if err := dr.db.Create(&emptyV).Error; err != nil {
-		return fmt.Errorf("could not create Voucher: %w", err)
+		return 0, fmt.Errorf("could not create Voucher: %w", err)
 	}
 
 	// 3- insert all the items in db:
 	viRepo := NewVoucherItemRepository(dr.db)
 	for _, item := range v.Items {
 		// Creating a voucheritem must first validate the itsem itself.
-		if err := viRepo.Create(emptyV.ID, item.SLID, item.DLID, item.Debit, item.Credit); err != nil {
+		if _, err := viRepo.Create(emptyV.ID, item.SLID, item.DLID, item.Debit, item.Credit); err != nil {
 			// if any error happened delete the voucher made and return:
 			dr.Delete(emptyV.ID)
-			return err
+			return 0, err
 		}
 	}
 
-	return nil
+	return emptyV.ID, nil
 }
 
 func (dr *VoucherRepository) Read(id uint) (*models.Voucher, error) {
@@ -53,7 +53,7 @@ func (dr *VoucherRepository) Read(id uint) (*models.Voucher, error) {
 		return nil, err
 	}
 
-	// Print the Voucher items
+	//Print the Voucher items
 	// fmt.Printf("Voucher: %s, Version: %d\n", voucher.Number, voucher.Version)
 	// for _, item := range voucher.Items {
 	// 	fmt.Printf("Voucheritem ID: %d, SLID: %d, DLID: %v Debit: %d, Credit: %d\n", item.ID, item.SLID, item.DLID, item.Debit, item.Credit)
@@ -71,9 +71,24 @@ func (dr *VoucherRepository) Update(id uint, v *models.Voucher) error {
 	// 2- fetch the voucher that needs to be updated
 	fetchedV := models.Voucher{}
 
-	if err := dr.db.Model(&models.Voucher{}).First(&fetchedV, "id = ?", id).Error; err != nil {
+	if err := dr.db.Model(&models.Voucher{}).Preload("Items").First(&fetchedV, "id = ?", id).Error; err != nil {
 		return err
 	}
+
+	// if fetchedV.Number != v.Number {
+	// 	// 4- Check if there are any references to this sl:
+	// 	var count int64
+	// 	err := dr.db.Model(&models.Voucher{}).Where("Number = ?", v.Number).Count(&count).Error
+	// 	// (SQLSTATE 42P01) : table voucheritem does not even exist
+	// 	if err != nil && !strings.Contains(err.Error(), "42P01") {
+	// 		return err
+	// 	}
+
+	// 	// If there are any references, raise an error
+	// 	if count > 0 {
+	// 		return fmt.Errorf("cannot update SL: it is referenced by %d Voucheritem(s)", count)
+	// 	}
+	// }
 
 	// 3- Row Version:
 	if fetchedV.Version != v.Version {
@@ -90,6 +105,7 @@ func (dr *VoucherRepository) Update(id uint, v *models.Voucher) error {
 	// else if the given vi has just an id field and the rest are zero-valued, this vi was meant to be DELETED
 	// else the given vi was meant to be UPDATED
 	for _, vi := range v.Items {
+
 		vi.VoucherID = fetchedV.ID
 		var fetchedVI models.Voucheritem
 
@@ -131,14 +147,23 @@ func (dr *VoucherRepository) Update(id uint, v *models.Voucher) error {
 		}
 
 	}
-
+	// for k, vis := range vis_partitioned {
+	// 	fmt.Println(k, ":")
+	// 	for _, vi := range vis {
+	// 		fmt.Println("\t", vi)
+	// 	}
+	// }
 	if sum_debit != sum_credit {
 		return fmt.Errorf("requested update will result in an unbalanced voucher:\tsum_debit: %v\tsum_credit: %v", sum_debit, sum_credit)
 	}
 
+	newlen := len(fetchedV.Items) + len(vis_partitioned["toInsert"]) - len(vis_partitioned["toDelete"])
+	if newlen < 2 || newlen > 500 {
+		return fmt.Errorf("voucher will have unacceptable number of voucheritems. expected between [2, 500], got %v", newlen)
+	}
+
 	// 6- Apply all changes, if any of them failed, rollback
 	return dr.db.Transaction(func(tx *gorm.DB) error {
-
 		newV := models.Voucher{
 			ID:      id,
 			Number:  v.Number,
@@ -151,7 +176,7 @@ func (dr *VoucherRepository) Update(id uint, v *models.Voucher) error {
 
 		for _, vi := range vis_partitioned["toInsert"] {
 
-			if err := viRepo.Create(vi.VoucherID, vi.SLID, vi.DLID, vi.Debit, vi.Credit); err != nil {
+			if _, err := viRepo.Create(vi.VoucherID, vi.SLID, vi.DLID, vi.Debit, vi.Credit); err != nil {
 				return err
 			}
 		}

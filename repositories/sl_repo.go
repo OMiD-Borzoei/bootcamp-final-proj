@@ -3,6 +3,7 @@ package repositories
 import (
 	"Project/models"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -15,20 +16,20 @@ func NewSLRepository(db *gorm.DB) *SLRepository {
 	return &SLRepository{db: db}
 }
 
-func (dr *SLRepository) Create(code string, title string, hassl bool) error {
+func (dr *SLRepository) Create(code string, title string, hassl bool) (uint, error) {
 
 	sl, err := models.NewSL(code, title, hassl)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if err := dr.db.Create(sl).Error; err != nil {
-		return fmt.Errorf("could not create sl: %w", err)
+		return 0, fmt.Errorf("could not create sl: %w", err)
 	}
-	return nil
+	return sl.ID, nil
 }
 
-func (dr *SLRepository) Read(id int) (*models.SL, error) {
+func (dr *SLRepository) Read(id uint) (*models.SL, error) {
 	sl := &models.SL{}
 	result := dr.db.Model(&models.SL{}).First(sl, "id = ?", id)
 
@@ -77,7 +78,8 @@ func (dr *SLRepository) Update(id uint, newSL *models.SL) error {
 	// 4- Check if there are any references to this sl:
 	var count int64
 	err := dr.db.Model(&models.Voucheritem{}).Where("sl_id = ?", sl.ID).Count(&count).Error
-	if err != nil {
+	// (SQLSTATE 42P01) : table voucheritem does not even exist
+	if err != nil && !strings.Contains(err.Error(), "42P01") {
 		return err
 	}
 
@@ -93,5 +95,9 @@ func (dr *SLRepository) Update(id uint, newSL *models.SL) error {
 }
 
 func (dr *SLRepository) Delete(id uint) error {
-	return dr.db.Model(&models.SL{}).Delete("id = ?", id).Error
+	err := dr.db.Model(&models.SL{}).Delete("id = ?", id).Error
+	if err != nil && strings.Contains(err.Error(), "23503") {
+		return fmt.Errorf("can't delete SL with id = %d cz it is referenced", id)
+	}
+	return err
 }

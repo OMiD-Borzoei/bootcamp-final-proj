@@ -61,20 +61,20 @@ func (dr *VoucherItemRepository) ValidateVoucherItem(vi *models.Voucheritem) err
 	return nil
 }
 
-func (dr *VoucherItemRepository) Create(voucherID uint, sl uint, dl *uint, debit, credit uint32) error {
+func (dr *VoucherItemRepository) Create(voucherID uint, sl uint, dl *uint, debit, credit uint32) (uint, error) {
 	voucheritem, err := models.NewVoucherItem(voucherID, sl, dl, debit, credit)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if err := dr.ValidateVoucherItem(voucheritem); err != nil {
-		return err
+		return 0, err
 	}
 
 	if err := dr.db.Create(voucheritem).Error; err != nil {
-		return fmt.Errorf("could not create DL: %w", err)
+		return 0, fmt.Errorf("could not create DL: %w", err)
 	}
-	return nil
+	return voucheritem.ID, nil
 }
 
 func (dr *VoucherItemRepository) Read(id uint) (*models.Voucheritem, error) {
