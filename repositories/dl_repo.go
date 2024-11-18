@@ -74,7 +74,7 @@ func (dr *DLRepository) Update(id uint, newDL *models.DL) error {
 		return fmt.Errorf("version mismatch: expected %d but found %d", dl.Version, newDL.Version)
 	}
 
-	// 4- Update
+	// 4- Update:
 	newDL.ID = dl.ID
 	newDL.Version = dl.Version + 1
 	return dr.db.Model(&models.SL{}).Where("id = ?", id).Save(newDL).Error

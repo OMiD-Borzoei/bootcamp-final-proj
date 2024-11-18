@@ -2,22 +2,34 @@ package models
 
 import (
 	"fmt"
-
-	"gorm.io/gorm"
 )
 
 type Voucheritem struct {
-	gorm.Model
-	VoucherNumber string
-	SL            SL  `gorm:"foreignKey:Code;constraint:OnDelete:RESTRICT,OnUpdate:RESTRICT;"`
-	DL            *DL `gorm:"foreignKey:Code;constraint:OnDelete:RESTRICT;"`
-	Debit         uint32
-	Credit        uint32
+	ID        uint `gorm:"primaryKey"`
+	VoucherID uint
+	SL        SL `gorm:"constraint:OnDelete:RESTRICT,OnUpdate:RESTRICT;"`
+	SLID      uint
+	DL        *DL `gorm:"constraint:OnDelete:RESTRICT;"`
+	DLID      *uint
+	Debit     uint32
+	Credit    uint32
 }
 
-func (vi *Voucheritem) ValidateVoucherItem() error {
+func (vi *Voucheritem) Validate() error {
 	if vi.Debit > 0 && vi.Credit > 0 {
 		return fmt.Errorf("one of the credit or debit must be 0")
 	}
+
 	return nil
+}
+
+func NewVoucherItem(VoucherID uint, sl uint, dl *uint, debit, credit uint32) (*Voucheritem, error) {
+	newvoucheritem := Voucheritem{
+		VoucherID: VoucherID,
+		SLID:      sl,
+		DLID:      dl,
+		Debit:     debit,
+		Credit:    credit,
+	}
+	return &newvoucheritem, nil
 }

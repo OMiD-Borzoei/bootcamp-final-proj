@@ -22,9 +22,9 @@ func (dr *VoucherItemRepository) ValidateVoucherItem(vi *models.Voucheritem) err
 
 	// Retrieve and check if Voucher exits:
 	var foundvoucher models.Voucher
-	if err := dr.db.Model(&models.Voucher{}).Where("number = ?", vi.VoucherNumber).First(&foundvoucher).Error; err != nil {
+	if err := dr.db.Model(&models.Voucher{}).Where("id = ?", vi.VoucherID).First(&foundvoucher).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("voucher with Number %v does not exist", vi.VoucherNumber)
+			return fmt.Errorf("voucher with Number %v does not exist", vi.VoucherID)
 		}
 		return fmt.Errorf("error retrieving Voucher: %w", err)
 	}
@@ -61,8 +61,8 @@ func (dr *VoucherItemRepository) ValidateVoucherItem(vi *models.Voucheritem) err
 	return nil
 }
 
-func (dr *VoucherItemRepository) Create(vouchernumber string, sl uint, dl *uint, debit, credit uint32) error {
-	voucheritem, err := models.NewVoucherItem(vouchernumber, sl, dl, debit, credit)
+func (dr *VoucherItemRepository) Create(voucherID uint, sl uint, dl *uint, debit, credit uint32) error {
+	voucheritem, err := models.NewVoucherItem(voucherID, sl, dl, debit, credit)
 	if err != nil {
 		return err
 	}
@@ -82,6 +82,7 @@ func (dr *VoucherItemRepository) Read(id uint) (*models.Voucheritem, error) {
 	return vi, dr.db.Model(&models.Voucheritem{}).First(vi, id).Error
 }
 
+// must only be called by voucherRepo.Update()
 func (dr *VoucherItemRepository) Update(id uint, newVI *models.Voucheritem) error {
 
 	// 1- Check if new vi is valid:
@@ -95,14 +96,8 @@ func (dr *VoucherItemRepository) Update(id uint, newVI *models.Voucheritem) erro
 		return result.Error
 	}
 
-	// 3- Handle Row Version:
-	if vi.Version != newVI.Version {
-		return fmt.Errorf("version mismatch: expected %d but found %d", vi.Version, newVI.Version)
-	}
-
-	// 4- Update:
+	// 3- Update:
 	newVI.ID = vi.ID
-	newVI.Version = vi.Version + 1
 	return dr.db.Model(&models.Voucheritem{}).Where("id = ?", id).Save(newVI).Error
 }
 
