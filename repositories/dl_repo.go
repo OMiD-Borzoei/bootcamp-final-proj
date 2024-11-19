@@ -36,6 +36,12 @@ func (dr *DLRepository) Read(id uint) (*models.DL, error) {
 	return dl, result.Error
 }
 
+func (dr *DLRepository) ReadAll() ([]models.DL, error) {
+	var dlList []models.DL
+	result := dr.db.Find(&dlList)
+	return dlList, result.Error
+}
+
 func (dr *DLRepository) ReadByCode(code string) (*models.DL, error) {
 	if err := models.ValidateString(code, "Code"); err != nil {
 		return nil, err

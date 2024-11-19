@@ -1,20 +1,32 @@
 package main
 
 import (
+	"Project/routes"
 	"log"
+	"net/http"
 
-	"Project/config"
-
-	"github.com/joho/godotenv"
-	_ "gorm.io/driver/postgres"
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 func main() {
-	godotenv.Load()
+	// Initialize the router
+	router := mux.NewRouter()
 
-	// Set up database connection
-	_, err := config.SetupDB()
-	if err != nil {
-		log.Fatalf("failed to connect to the database: %v", err)
-	}
+	// Setup the routes
+	routes.SetupRoutes(router)
+
+	// Enable CORS
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"}, // Allow all origins or specify a list of allowed origins
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders:   []string{"Content-Type"},
+		AllowCredentials: true,
+	})
+
+	// Use the CORS handler
+	handler := corsHandler.Handler(router)
+
+	// Start the server
+	log.Fatal(http.ListenAndServe(":8080", handler))
 }

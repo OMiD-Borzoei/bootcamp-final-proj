@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SL CRUD Operations</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">SL CRUD Operations</h1>
+
+        <!-- Create Section -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h4>Create SL</h4>
+                <form id="createForm">
+                    <div class="mb-3">
+                        <label for="slCode" class="form-label">Code</label>
+                        <input type="text" class="form-control" id="slCode" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="slTitle" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="slTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="hasDL" class="form-label">Has DL</label>
+                        <select class="form-control" id="hasDL" required>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- SL List Section -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h4>SL List</h4>
+                <button class="btn btn-secondary mb-3" id="fetchSLs">Fetch SLs</button>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Code</th>
+                            <th>Title</th>
+                            <th>Has DL</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="slTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Update Section -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h4>Update SL</h4>
+                <form id="updateForm">
+                    <div class="mb-3">
+                        <label for="updateSlId" class="form-label">SL ID</label>
+                        <input type="text" class="form-control" id="updateSlId" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="updateSlCode" class="form-label">Code</label>
+                        <input type="text" class="form-control" id="updateSlCode" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="updateSlTitle" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="updateSlTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="updateHasDL" class="form-label">Has DL</label>
+                        <select class="form-control" id="updateHasDL" required>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-warning">Update</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const apiUrl = "http://localhost:8080/api/v1/sl"; // Your SL API endpoint
+
+        // Create SL
+        $("#createForm").submit(function (event) {
+            event.preventDefault();
+            const code = $("#slCode").val();
+            const title = $("#slTitle").val();
+            const hasDL = $("#hasDL").val() === "true";
+
+            $.ajax({
+                url: apiUrl,
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ Code: code, Title: title, HasDL: hasDL }),
+                success: function (response) {
+                    console.log("Response from Create SL API:", response);  // Debugging log
+                    alert("SL Created! ID: " + response.id);
+                    $("#createForm")[0].reset();
+                    fetchSLs(); // Refresh SL list after creation
+                },
+                error: function (xhr) {
+                    console.log("Error:", xhr.responseText);  // Debugging log
+                    alert("Error: " + xhr.responseText);
+                }
+            });
+        });
+
+        // Fetch SLs
+        function fetchSLs() {
+            $.ajax({
+                url: apiUrl,
+                method: "GET",
+                success: function (response) {
+                    console.log("Response from Fetch SLs API:", response);  // Debugging log
+                    const tableBody = $("#slTable");
+                    tableBody.empty();
+
+                    // Ensure the response is an array and contains expected fields
+                    if (Array.isArray(response)) {
+                        response.forEach(sl => {
+                            const row = `
+                                <tr>
+                                    <td>${sl.ID}</td>
+                                    <td>${sl.Code}</td>
+                                    <td>${sl.Title}</td>
+                                    <td>${sl.HasDL}</td>
+                                    <td>
+                                        <button class="btn btn-danger btn-sm delete-btn" data-id="${sl.ID}">Delete</button>
+                                        <button class="btn btn-warning btn-sm update-btn" data-id="${sl.ID}" data-code="${sl.Code}" data-title="${sl.Title}" data-hasdl="${sl.HasDL}">Update</button>
+                                    </td>
+                                </tr>
+                            `;
+                            tableBody.append(row);
+                        });
+
+                        // Add delete functionality
+                        $(".delete-btn").click(function () {
+                            const id = $(this).data("id");
+                            $.ajax({
+                                url: `${apiUrl}/${id}`,
+                                method: "DELETE",
+                                success: function () {
+                                    alert("SL Deleted!");
+                                    fetchSLs(); // Refresh SL list after deletion
+                                },
+                                error: function (xhr) {
+                                    alert("Error: " + xhr.responseText);
+                                }
+                            });
+                        });
+
+                        // Add update functionality
+                        $(".update-btn").click(function () {
+                            const id = $(this).data("id");
+                            const code = $(this).data("code");
+                            const title = $(this).data("title");
+                            const hasDL = $(this).data("hasdl");
+
+                            $("#updateSlId").val(id);
+                            $("#updateSlCode").val(code);
+                            $("#updateSlTitle").val(title);
+                            $("#updateHasDL").val(hasDL.toString());
+                        });
+                    } else {
+                        console.log("Invalid response format:", response);  // Debugging log
+                        alert("Failed to fetch SLs, invalid response format.");
+                    }
+                },
+                error: function (xhr) {
+                    console.log("Error:", xhr.responseText);  // Debugging log
+                    alert("Error: " + xhr.responseText);
+                }
+            });
+        }
+
+        // Update SL
+        $("#updateForm").submit(function (event) {
+            event.preventDefault();
+            const id = $("#updateSlId").val();
+            const code = $("#updateSlCode").val();
+            const title = $("#updateSlTitle").val();
+            const hasDL = $("#updateHasDL").val() === "true";
+
+            $.ajax({
+                url: `${apiUrl}/${id}`,
+                method: "PUT",
+                contentType: "application/json",
+                data: JSON.stringify({ Code: code, Title: title, HasDL: hasDL }),
+                success: function () {
+                    alert("SL Updated!");
+                    $("#updateForm")[0].reset();
+                    fetchSLs(); // Refresh SL list after update
+                },
+                error: function (xhr) {
+                    alert("Error: " + xhr.responseText);
+                }
+            });
+        });
+
+        // Initial load of SLs
+        $(document).ready(function() {
+            fetchSLs();  // Call the function to load SLs when the page first loads
+        });
+
+        // Fetch SLs button functionality
+        $("#fetchSLs").click(function () {
+            fetchSLs(); // Trigger the fetchSLs function on button click
+        });
+
+    </script>
+</body>
+
+</html>

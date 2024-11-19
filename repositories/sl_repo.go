@@ -36,6 +36,12 @@ func (dr *SLRepository) Read(id uint) (*models.SL, error) {
 	return sl, result.Error
 }
 
+func (dr *SLRepository) ReadAll() ([]models.SL, error) {
+	var slList []models.SL
+	result := dr.db.Find(&slList)
+	return slList, result.Error
+}
+
 func (dr *SLRepository) ReadByCode(code string) (*models.SL, error) {
 	if err := models.ValidateString(code, "Code"); err != nil {
 		return nil, err

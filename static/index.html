@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DL & SL CRUD Operations</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">DL & SL CRUD Operations</h1>
+
+        <!-- Tab Buttons -->
+        <div class="btn-group mb-4" role="group">
+            <button type="button" class="btn btn-primary" id="dlTab">DL</button>
+            <button type="button" class="btn btn-secondary" id="slTab">SL</button>
+        </div>
+
+        <!-- DL Tab Content -->
+        <div id="dlTabContent">
+            <!-- Create Section for DL -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h4>Create DL</h4>
+                    <form id="createForm">
+                        <div class="mb-3">
+                            <label for="code" class="form-label">Code</label>
+                            <input type="text" class="form-control" id="code" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="title" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- DL List Section -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h4>DL List</h4>
+                    <button class="btn btn-secondary mb-3" id="fetchDLs">Fetch DLs</button>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Code</th>
+                                <th>Title</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dlTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Update Section for DL -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h4>Update DL</h4>
+                    <form id="updateForm">
+                        <div class="mb-3">
+                            <label for="updateId" class="form-label">DL ID</label>
+                            <input type="text" class="form-control" id="updateId" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updateCode" class="form-label">Code</label>
+                            <input type="text" class="form-control" id="updateCode" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updateTitle" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="updateTitle" required>
+                        </div>
+                        <button type="submit" class="btn btn-warning">Update</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- SL Tab Content -->
+        <div id="slTabContent" style="display:none;">
+            <!-- Create Section for SL -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h4>Create SL</h4>
+                    <form id="createSLForm">
+                        <div class="mb-3">
+                            <label for="slCode" class="form-label">Code</label>
+                            <input type="text" class="form-control" id="slCode" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="slTitle" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="slTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="hasDL" class="form-label">Has DL</label>
+                            <input type="checkbox" id="hasDL">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create SL</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- SL List Section -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h4>SL List</h4>
+                    <button class="btn btn-secondary mb-3" id="fetchSLs">Fetch SLs</button>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Code</th>
+                                <th>Title</th>
+                                <th>Has DL</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="slTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Update Section for SL -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h4>Update SL</h4>
+                    <form id="updateSLForm">
+                        <div class="mb-3">
+                            <label for="updateSLId" class="form-label">SL ID</label>
+                            <input type="text" class="form-control" id="updateSLId" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updateSLCode" class="form-label">Code</label>
+                            <input type="text" class="form-control" id="updateSLCode" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updateSLTitle" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="updateSLTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="updateHasDL" class="form-label">Has DL</label>
+                            <input type="checkbox" id="updateHasDL">
+                        </div>
+                        <button type="submit" class="btn btn-warning">Update SL</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const dlApiUrl = "http://localhost:8080/api/v1/dl";
+        const slApiUrl = "http://localhost:8080/api/v1/sl";
+
+        // Function to fetch DLs
+        function fetchDLs() {
+            $.ajax({
+                url: dlApiUrl,
+                method: "GET",
+                success: function (response) {
+                    const tableBody = $("#dlTable");
+                    tableBody.empty();
+
+                    if (Array.isArray(response)) {
+                        response.forEach(dl => {
+                            const row = `
+                                <tr>
+                                    <td>${dl.ID}</td>
+                                    <td>${dl.Code}</td>
+                                    <td>${dl.Title}</td>
+                                    <td>
+                                        <button class="btn btn-danger btn-sm delete-btn" data-id="${dl.ID}">Delete</button>
+                                        <button class="btn btn-warning btn-sm update-btn" data-id="${dl.ID}" data-code="${dl.Code}" data-title="${dl.Title}">Update</button>
+                                    </td>
+                                </tr>
+                            `;
+                            tableBody.append(row);
+                        });
+
+                        // Add delete and update functionality for DL
+                        $(".delete-btn").click(function () {
+                            const id = $(this).data("id");
+                            $.ajax({
+                                url: `${dlApiUrl}/${id}`,
+                                method: "DELETE",
+                                success: function () {
+                                    alert("DL Deleted!");
+                                    fetchDLs(); // Refresh DL list after deletion
+                                },
+                                error: function (xhr) {
+                                    alert("Error: " + xhr.responseText);
+                                }
+                            });
+                        });
+
+                        $(".update-btn").click(function () {
+                            const id = $(this).data("id");
+                            const code = $(this).data("code");
+                            const title = $(this).data("title");
+
+                            $("#updateId").val(id);
+                            $("#updateCode").val(code);
+                            $("#updateTitle").val(title);
+                        });
+                    }
+                },
+                error: function (xhr) {
+                    alert("Error: " + xhr.responseText);
+                }
+            });
+        }
+
+        // Function to fetch SLs
+        function fetchSLs() {
+            $.ajax({
+                url: slApiUrl,
+                method: "GET",
+                success: function (response) {
+                    const tableBody = $("#slTable");
+                    tableBody.empty();
+
+                    if (Array.isArray(response)) {
+                        response.forEach(sl => {
+                            const row = `
+                                <tr>
+                                    <td>${sl.ID}</td>
+                                    <td>${sl.Code}</td>
+                                    <td>${sl.Title}</td>
+                                    <td>${sl.HasDL ? 'Yes' : 'No'}</td>
+                                    <td>
+                                        <button class="btn btn-danger btn-sm delete-btn" data-id="${sl.ID}">Delete</button>
+                                        <button class="btn btn-warning btn-sm update-btn" data-id="${sl.ID}" data-code="${sl.Code}" data-title="${sl.Title}" data-hasdl="${sl.HasDL}">Update</button>
+                                    </td>
+                                </tr>
+                            `;
+                            tableBody.append(row);
+                        });
+
+                        // Add delete and update functionality for SL
+                        $(".delete-btn").click(function () {
+                            const id = $(this).data("id");
+                            $.ajax({
+                                url: `${slApiUrl}/${id}`,
+                                method: "DELETE",
+                                success: function () {
+                                    alert("SL Deleted!");
+                                    fetchSLs(); // Refresh SL list after deletion
+                                },
+                                error: function (xhr) {
+                                    alert("Error: " + xhr.responseText);
+                                }
+                            });
+                        });
+
+                        $(".update-btn").click(function () {
+                            const id = $(this).data("id");
+                            const code = $(this).data("code");
+                            const title = $(this).data("title");
+                            const hasDL = $(this).data("hasdl");
+
+                            $("#updateSLId").val(id);
+                            $("#updateSLCode").val(code);
+                            $("#updateSLTitle").val(title);
+                            $("#updateHasDL").prop("checked", hasDL);
+                        });
+                    }
+                },
+                error: function (xhr) {
+                    alert("Error: " + xhr.responseText);
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            // DL Tab switch
+            $("#dlTab").click(function () {
+                $("#dlTabContent").show();
+                $("#slTabContent").hide();
+            });
+
+            // SL Tab switch
+            $("#slTab").click(function () {
+                $("#slTabContent").show();
+                $("#dlTabContent").hide();
+            });
+
+            // Initial loading
+            $("#dlTabContent").show();
+            $("#slTabContent").hide();
+            fetchDLs(); // Fetch DL data on initial load
+            fetchSLs(); // Fetch SL data on initial load
+
+            // Event handlers for creating DL and SL
+            $("#createForm").submit(function (e) {
+                e.preventDefault();
+                const code = $("#code").val();
+                const title = $("#title").val();
+                $.ajax({
+                    url: dlApiUrl,
+                    method: "POST",
+                    data: JSON.stringify({ Code: code, Title: title }),
+                    contentType: "application/json",
+                    success: function () {
+                        alert("DL Created!");
+                        fetchDLs(); // Refresh DL list after creation
+                    },
+                    error: function (xhr) {
+                        alert("Error: " + xhr.responseText);
+                    }
+                });
+            });
+
+            $("#createSLForm").submit(function (e) {
+                e.preventDefault();
+                const code = $("#slCode").val();
+                const title = $("#slTitle").val();
+                const hasDL = $("#hasDL").prop("checked");
+                $.ajax({
+                    url: slApiUrl,
+                    method: "POST",
+                    data: JSON.stringify({ Code: code, Title: title, HasDL: hasDL }),
+                    contentType: "application/json",
+                    success: function () {
+                        alert("SL Created!");
+                        fetchSLs(); // Refresh SL list after creation
+                    },
+                    error: function (xhr) {
+                        alert("Error: " + xhr.responseText);
+                    }
+                });
+            });
+
+            // Event handlers for updating DL and SL
+            $("#updateForm").submit(function (e) {
+                e.preventDefault();
+                const id = $("#updateId").val();
+                const code = $("#updateCode").val();
+                const title = $("#updateTitle").val();
+                $.ajax({
+                    url: `${dlApiUrl}/${id}`,
+                    method: "PUT",
+                    data: JSON.stringify({ Code: code, Title: title }),
+                    contentType: "application/json",
+                    success: function () {
+                        alert("DL Updated!");
+                        fetchDLs(); // Refresh DL list after update
+                    },
+                    error: function (xhr) {
+                        alert("Error: " + xhr.responseText);
+                    }
+                });
+            });
+
+            $("#updateSLForm").submit(function (e) {
+                e.preventDefault();
+                const id = $("#updateSLId").val();
+                const code = $("#updateSLCode").val();
+                const title = $("#updateSLTitle").val();
+                const hasDL = $("#updateHasDL").prop("checked");
+                $.ajax({
+                    url: `${slApiUrl}/${id}`,
+                    method: "PUT",
+                    data: JSON.stringify({ Code: code, Title: title, HasDL: hasDL }),
+                    contentType: "application/json",
+                    success: function () {
+                        alert("SL Updated!");
+                        fetchSLs(); // Refresh SL list after update
+                    },
+                    error: function (xhr) {
+                        alert("Error: " + xhr.responseText);
+                    }
+                });
+            });
+        });
+    </script>
+
+</body>
+
+</html>
