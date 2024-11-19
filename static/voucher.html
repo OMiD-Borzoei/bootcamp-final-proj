@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voucher CRUD</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+</head>
+
+<body>
+
+    <div class="container mt-5">
+        <h1>Voucher CRUD Operations</h1>
+
+        <!-- Create Voucher Form -->
+        <h3>Create Voucher</h3>
+        <form id="createVoucherForm">
+            <div class="form-group">
+                <label for="voucherNumber">Voucher Number</label>
+                <input type="text" class="form-control" id="voucherNumber" placeholder="Enter Voucher Number" required>
+            </div>
+
+            <h4>Voucher Items</h4>
+            <table class="table table-bordered" id="voucherItemsTable">
+                <thead>
+                    <tr>
+                        <th>SL ID</th>
+                        <th>DL ID (optional)</th>
+                        <th>Debit Amount</th>
+                        <th>Credit Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="voucher-item">
+                        <td><input type="number" class="form-control voucherItemSLID" placeholder="Enter SL ID"
+                                required></td>
+                        <td><input type="number" class="form-control voucherItemDLID"
+                                placeholder="Enter DL ID (optional)"></td>
+                        <td><input type="number" class="form-control voucherItemDebit" placeholder="Enter Debit Amount"
+                                required></td>
+                        <td><input type="number" class="form-control voucherItemCredit"
+                                placeholder="Enter Credit Amount" required></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <button type="button" class="btn btn-secondary" id="addVoucherItemButton">Add Another Voucher Item</button>
+            <br><br>
+            <button type="submit" class="btn btn-primary">Create Voucher</button>
+        </form>
+
+        <hr>
+
+        <!-- Delete Voucher Form -->
+        <h3>Delete Voucher</h3>
+        <div class="form-group">
+            <label for="deleteVoucherId">Voucher ID</label>
+            <input type="number" class="form-control" id="deleteVoucherId" placeholder="Enter Voucher ID">
+            <button class="btn btn-danger" id="deleteVoucherButton">Delete Voucher</button>
+        </div>
+
+    </div>
+
+    <script>
+        const apiUrl = "http://localhost:8080/api/v1/v";
+
+        // Handle Create Voucher
+        $('#createVoucherForm').submit(function (e) {
+            e.preventDefault();
+
+            const voucherNumber = $('#voucherNumber').val();
+            const voucherItems = [];
+
+            // Collect Voucher Items and convert values to numbers
+            $('.voucher-item').each(function () {
+                const slID = parseInt($(this).find('.voucherItemSLID').val(), 10); // Convert SLID to a number
+                const dlID = $(this).find('.voucherItemDLID').val();
+                const debit = parseFloat($(this).find('.voucherItemDebit').val()); // Convert Debit to a number
+                const credit = parseFloat($(this).find('.voucherItemCredit').val()); // Convert Credit to a number
+
+                // Add to the items array
+                voucherItems.push({
+                    SLID: slID,
+                    DLID: dlID ? (dlID === "" ? null : parseInt(dlID, 10)) : null, // Convert DLID to number or null
+                    Debit: debit,
+                    Credit: credit
+                });
+            });
+
+            // Ensure at least two voucher items
+            if (voucherItems.length < 2) {
+                alert('You must add at least 2 voucher items.');
+                return;
+            }
+
+            $.ajax({
+                url: apiUrl,  // Assuming the endpoint is '/vouchers' to create a voucher
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    Number: voucherNumber,
+                    Items: voucherItems
+                }),
+                success: function (response) {
+                    alert('Voucher created successfully!');
+                    $('#voucherNumber').val('');
+                    $('#voucherItemsTable tbody').empty();
+                    addVoucherItemField(); // Reset to 1 Voucher Item
+                },
+                error: function (xhr) {
+                    alert('Error: ' + xhr.responseText);
+                }
+            });
+        });
+
+        // Add another Voucher Item field
+        $('#addVoucherItemButton').click(function () {
+            addVoucherItemField();
+        });
+
+        function addVoucherItemField() {
+            const newVoucherItemField = `
+                <tr class="voucher-item">
+                    <td><input type="number" class="form-control voucherItemSLID" placeholder="Enter SL ID" required></td>
+                    <td><input type="number" class="form-control voucherItemDLID" placeholder="Enter DL ID (optional)"></td>
+                    <td><input type="number" class="form-control voucherItemDebit" placeholder="Enter Debit Amount" required></td>
+                    <td><input type="number" class="form-control voucherItemCredit" placeholder="Enter Credit Amount" required></td>
+                </tr>
+            `;
+            $('#voucherItemsTable tbody').append(newVoucherItemField);
+        }
+
+        // Delete Voucher
+        $('#deleteVoucherButton').click(function () {
+            const voucherId = $('#deleteVoucherId').val();
+
+            $.ajax({
+                url: `${apiUrl}/${voucherId}`,
+                type: 'DELETE',
+                success: function (response) {
+                    alert('Voucher deleted successfully!');
+                },
+                error: function (xhr) {
+                    alert('Error: ' + xhr.responseText);
+                }
+            });
+        });
+
+    </script>
+
+</body>
+
+</html>

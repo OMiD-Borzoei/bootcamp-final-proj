@@ -35,4 +35,16 @@ func SetupRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/sl/{id}", slHandler.GetSLByID).Methods("GET")
 	router.HandleFunc("/api/v1/sl/{id}", slHandler.UpdateSL).Methods("PUT")
 	router.HandleFunc("/api/v1/sl/{id}", slHandler.DeleteSL).Methods("DELETE")
+
+	// Voucher Handlers and Services
+	vRepo := repositories.NewVoucherRepository(db)
+	vService := services.NewVoucherService(vRepo)
+	vHandler := handlers.NewVoucherHandler(vService)
+
+	// Define Voucher API routes
+	router.HandleFunc("/api/v1/v", vHandler.GetAllVouchers).Methods("GET")
+	router.HandleFunc("/api/v1/v", vHandler.CreateVoucher).Methods("POST")
+	router.HandleFunc("/api/v1/v/{id}", vHandler.GetVoucher).Methods("GET")
+	router.HandleFunc("/api/v1/v/{id}", vHandler.UpdateVoucher).Methods("PUT")
+	router.HandleFunc("/api/v1/v/{id}", vHandler.DeleteVoucher).Methods("DELETE")
 }

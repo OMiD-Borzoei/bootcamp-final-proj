@@ -61,6 +61,12 @@ func (dr *VoucherRepository) Read(id uint) (*models.Voucher, error) {
 	return &voucher, nil
 }
 
+func (dr *VoucherRepository) ReadAll() ([]models.Voucher, error) {
+	var vList []models.Voucher
+	result := dr.db.Preload("Items").Find(&vList)
+	return vList, result.Error
+}
+
 func (dr *VoucherRepository) Update(id uint, v *models.Voucher) error {
 
 	// 1- Ensure the given number is a valid string:

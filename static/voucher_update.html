@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voucher CRUD</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1>Voucher CRUD Operations</h1>
+
+        <!-- Update Voucher Section -->
+        <h3>View and Update Voucher</h3>
+        <div class="form-group">
+            <label for="viewVoucherId">Voucher ID</label>
+            <input type="number" class="form-control" id="viewVoucherId" placeholder="Enter Voucher ID">
+            <button class="btn btn-info mt-2" id="viewVoucherButton">View Voucher</button>
+        </div>
+        <div id="voucherDetails" class="mt-4"></div>
+    </div>
+
+    <script>
+        const apiUrl = "http://localhost:8080/api/v1/v";
+
+        // Array to keep track of deleted voucher item IDs
+        let deletedVoucherItemIds = [];
+
+        // View Voucher
+        document.getElementById('viewVoucherButton').addEventListener('click', async () => {
+            const voucherId = document.getElementById('viewVoucherId').value;
+
+            try {
+                const response = await axios.get(`${apiUrl}/${voucherId}`);
+                const voucher = response.data;
+
+                // Render voucher details and items for update
+                const itemsHtml = voucher.Items.map(item => `
+                    <tr class="voucher-item" data-id="${item.ID}">
+                        <td><input type="number" class="form-control sl-id" value="${item.SLID}" required></td>
+                        <td><input type="number" class="form-control dl-id" value="${item.DLID || ''}"></td>
+                        <td><input type="number" class="form-control debit" value="${item.Debit}" required></td>
+                        <td><input type="number" class="form-control credit" value="${item.Credit}" required></td>
+                        <td><button type="button" class="btn btn-danger delete-button">Delete</button></td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('voucherDetails').innerHTML = `
+                    <form id="updateVoucherForm">
+                        <div class="form-group">
+                            <label for="voucherNumber">Voucher Number</label>
+                            <input type="text" class="form-control" id="voucherNumber" value="${voucher.Number}" required>
+                        </div>
+                        <div class="form-group mt-3">
+                            <label for="voucherVersion">Version</label>
+                            <input type="number" class="form-control" id="voucherVersion" value="${voucher.Version}" readonly>
+                        </div>
+                        <h4 class="mt-4">Voucher Items</h4>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>SL ID</th>
+                                    <th>DL ID</th>
+                                    <th>Debit</th>
+                                    <th>Credit</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>${itemsHtml}</tbody>
+                        </table>
+                        <div class="form-group mt-3">
+                            <button type="button" class="btn btn-success" id="addVoucherItemButton">Add Voucher Item</button>
+                        </div>
+                        <button type="submit" class="btn btn-warning mt-3">Update Voucher</button>
+                    </form>
+                `;
+            } catch (error) {
+                alert('Error fetching voucher: ' + error.response?.data || error.message);
+            }
+        });
+
+        // Handle local deletion of voucher items (Event Delegation)
+        document.getElementById('voucherDetails').addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-button')) {
+                const row = e.target.closest('tr');
+                const itemId = row.dataset.id;
+
+                // Track deleted item ID if it exists
+                if (itemId && itemId !== "null") {
+                    deletedVoucherItemIds.push(Number(itemId)); // Only push ID if it's not a new item
+                }
+
+                // Remove the row from the table
+                row.remove();
+            }
+        });
+
+        // Handle adding new voucher items
+        document.getElementById('voucherDetails').addEventListener('click', (e) => {
+            if (e.target.id === 'addVoucherItemButton') {
+                const tbody = document.querySelector('#voucherDetails tbody');
+                const newRow = `
+                    <tr class="voucher-item" data-id="null">
+                        <td><input type="number" class="form-control sl-id" placeholder="SL ID" required></td>
+                        <td><input type="number" class="form-control dl-id" placeholder="DL ID"></td>
+                        <td><input type="number" class="form-control debit" placeholder="Debit" required></td>
+                        <td><input type="number" class="form-control credit" placeholder="Credit" required></td>
+                        <td><button type="button" class="btn btn-danger delete-button">Delete</button></td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', newRow);
+            }
+        });
+
+        // Handle voucher update
+        document.getElementById('voucherDetails').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const form = e.target;
+            const voucherId = document.getElementById('viewVoucherId').value;
+            const updatedVoucherNumber = document.getElementById('voucherNumber').value;
+            const updatedVoucherVersion = Number(document.getElementById('voucherVersion').value);
+
+            // Process voucher items
+            const updatedItems = Array.from(form.querySelectorAll('tbody tr')).map(row => {
+                const inputs = row.querySelectorAll('input');
+                const itemId = row.dataset.id; // ID is null for new items
+
+                const item = {
+                    SLID: Number(inputs[0].value),
+                    DLID: inputs[1].value ? Number(inputs[1].value) : null,
+                    Debit: Number(inputs[2].value),
+                    Credit: Number(inputs[3].value),
+                };
+
+                // Only add ID for existing items (not new items)
+                if (itemId && itemId !== "null") {
+                    item.ID = Number(itemId);
+                }
+
+                return item;
+            });
+
+            // Prepare the update payload
+            const payload = {
+                Number: updatedVoucherNumber,
+                Version: updatedVoucherVersion,
+                Items: updatedItems.filter(item => {
+                    // Items for deletion will have only ID and no other fields (empty fields)
+                    return !(item.ID && !item.Debit && !item.Credit && !item.SLID && !item.DLID);
+                }),   // Only include items that are to be updated or inserted (deletions handled separately)
+            };
+
+            // Add deleted items to the payload
+            payload.Items = [
+                ...payload.Items,
+                ...deletedVoucherItemIds.map(id => ({ ID: id }))  // Items to delete (only ID)
+            ];
+
+            try {
+                await axios.put(`${apiUrl}/${voucherId}`, payload);
+                alert('Voucher updated successfully!');
+                deletedVoucherItemIds = []; // Clear deleted items list
+                document.getElementById('viewVoucherButton').click(); // Reload the voucher
+            } catch (error) {
+                alert('Error updating voucher: ' + error.response?.data || error.message);
+            }
+        });
+    </script>
+</body>
+
+</html>
