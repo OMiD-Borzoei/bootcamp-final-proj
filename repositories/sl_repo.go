@@ -24,7 +24,16 @@ func (dr *SLRepository) Create(code string, title string, hassl bool) (uint, err
 	}
 
 	if err := dr.db.Create(sl).Error; err != nil {
-		return 0, fmt.Errorf("could not create sl: %w", err)
+		// check if unique constraint is violated:
+		if strings.Contains(err.Error(), "23505") {
+			if strings.Contains(err.Error(), "code") {
+				return 0, fmt.Errorf("can't create SL cz a SL with code=%s already exists", sl.Code)
+			}
+			if strings.Contains(err.Error(), "title") {
+				return 0, fmt.Errorf("can't create SL cz a SL with title=%s already exists", sl.Title)
+			}
+		}
+		return 0, fmt.Errorf("could not create SL: %w", err)
 	}
 	return sl.ID, nil
 }
@@ -67,7 +76,7 @@ func (dr *SLRepository) ReadByTitle(title string) (*models.SL, error) {
 }
 
 func (dr *SLRepository) Update(id uint, newSL *models.SL) error {
-	// 1- Check if newdl is valid:
+	// 1- Check if newsl is valid:
 	if err := newSL.Validate(); err != nil {
 		return err
 	}
@@ -97,9 +106,22 @@ func (dr *SLRepository) Update(id uint, newSL *models.SL) error {
 	}
 
 	// 5- Update:
-	newSL.ID = sl.ID
-	newSL.Version = sl.Version + 1
-	return dr.db.Model(&models.SL{}).Where("id = ?", id).Save(newSL).Error
+	newSL.ID, newSL.Version = sl.ID, sl.Version+1
+	err = dr.db.Model(&models.SL{}).Where("id = ?", id).Save(newSL).Error
+
+	if err != nil {
+		// check if unique constraint is violated:
+		if strings.Contains(err.Error(), "23505") {
+			if strings.Contains(err.Error(), "code") {
+				return fmt.Errorf("can't update SL cz a SL with code=%s already exists", newSL.Code)
+			}
+			if strings.Contains(err.Error(), "title") {
+				return fmt.Errorf("can't update SL cz a SL with title=%s already exists", newSL.Title)
+			}
+		}
+		return fmt.Errorf("could not update SL: %w", err)
+	}
+	return nil
 }
 
 func (dr *SLRepository) Delete(id uint) error {

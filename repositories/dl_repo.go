@@ -24,6 +24,15 @@ func (dr *DLRepository) Create(code string, title string) (uint, error) {
 	}
 
 	if err := dr.db.Create(dl).Error; err != nil {
+		// check if unique constraint is violated:
+		if strings.Contains(err.Error(), "23505") {
+			if strings.Contains(err.Error(), "code") {
+				return 0, fmt.Errorf("can't create DL cz a DL with code=%s already exists", dl.Code)
+			}
+			if strings.Contains(err.Error(), "title") {
+				return 0, fmt.Errorf("can't create DL cz a DL with title=%s already exists", dl.Title)
+			}
+		}
 		return 0, fmt.Errorf("could not create DL: %w", err)
 	}
 	return dl.ID, nil
@@ -85,7 +94,22 @@ func (dr *DLRepository) Update(id uint, newDL *models.DL) error {
 
 	// 4- Update:
 	newDL.ID, newDL.Version = dl.ID, dl.Version+1
-	return dr.db.Model(&models.SL{}).Where("id = ?", id).Save(newDL).Error
+	err := dr.db.Model(&models.SL{}).Where("id = ?", id).Save(newDL).Error
+
+	if err != nil {
+		// check if unique constraint is violated:
+		if strings.Contains(err.Error(), "23505") {
+			if strings.Contains(err.Error(), "code") {
+				return fmt.Errorf("can't update DL cz a DL with code=%s already exists", newDL.Code)
+			}
+			if strings.Contains(err.Error(), "title") {
+				return fmt.Errorf("can't update DL cz a DL with title=%s already exists", newDL.Title)
+			}
+		}
+		return fmt.Errorf("could not update DL: %w", err)
+	}
+
+	return nil
 }
 
 func (dr *DLRepository) Delete(id uint) error {

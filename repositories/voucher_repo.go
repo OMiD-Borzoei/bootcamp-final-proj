@@ -3,6 +3,7 @@ package repositories
 import (
 	"Project/models"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -26,6 +27,10 @@ func (dr *VoucherRepository) Create(v *models.Voucher) (uint, error) {
 		Number: v.Number,
 	}
 	if err := dr.db.Create(&emptyV).Error; err != nil {
+		// check if unique constraint is violated:
+		if strings.Contains(err.Error(), "23505") {
+			return 0, fmt.Errorf("can't create Voucher cz a Voucher with number=%s already exists", emptyV.Number)
+		}
 		return 0, fmt.Errorf("could not create Voucher: %w", err)
 	}
 
@@ -159,6 +164,10 @@ func (dr *VoucherRepository) Update(id uint, v *models.Voucher) error {
 		}
 
 		if err := dr.db.Model(&models.Voucher{}).Where("id = ?", id).Save(&newV).Error; err != nil {
+			// check if unique constraint is violated:
+			if strings.Contains(err.Error(), "23505") {
+				return fmt.Errorf("can't update Voucher cz a Voucher with number=%s already exists", newV.Number)
+			}
 			return err
 		}
 
@@ -184,6 +193,7 @@ func (dr *VoucherRepository) Update(id uint, v *models.Voucher) error {
 		// return nil to commit transaction if everything is fine:
 		return nil
 	})
+
 }
 
 func (dr *VoucherRepository) Delete(id uint) error {

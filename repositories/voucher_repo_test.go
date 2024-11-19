@@ -153,12 +153,12 @@ func TestAllVmethods(t *testing.T) {
 				assert.Nil(t, err)
 
 				_, err = repo.Create(&itemedV)
-				assert.Contains(t, err.Error(), "duplicate key")
+				assert.Contains(t, err.Error(), "already exists")
 			})
 
 			t.Run("Should create a V with a number that has 64 Persian chars", func(t *testing.T) {
 				itemedV.Number, _ = stamp("V003")
-				for range 64 - len(itemedV.Number) {
+				for range models.STRING_LIMIT - len(itemedV.Number) {
 					itemedV.Number += "ک"
 				}
 				_, err := repo.Create(&itemedV)
@@ -307,7 +307,7 @@ func TestAllVmethods(t *testing.T) {
 					itemedV.Number = fetchedV.Number
 					err := repo.Update(itemedV.ID, &itemedV)
 
-					assert.Contains(t, err.Error(), "duplicate key")
+					assert.Contains(t, err.Error(), "already exists")
 				})
 
 				t.Run("no valid sl provided", func(t *testing.T) {
@@ -351,6 +351,7 @@ func TestAllVmethods(t *testing.T) {
 			})
 
 			t.Run("Should Update to a valid state", func(t *testing.T) {
+
 				err := repo.Update(itemedV.ID, &itemedV)
 				assert.Nil(t, err)
 			})

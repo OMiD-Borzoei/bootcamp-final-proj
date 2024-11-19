@@ -35,13 +35,13 @@ func TestAllSLmethods(t *testing.T) {
 			t.Run("Should not Add SL with empty code", func(t *testing.T) {
 				code, title = "", fmt.Sprintf("%d", time.Now().UnixNano())
 				_, err := repo.Create(code, title, false)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Code cannot be nil")
 			})
 
 			t.Run("Should not Add SL with empty title", func(t *testing.T) {
 				code, title = fmt.Sprintf("%d", time.Now().UnixNano()), ""
 				_, err := repo.Create(code, title, false)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Title cannot be nil")
 			})
 
 			t.Run("Should not Add SL with a code that has more that 64 chars", func(t *testing.T) {
@@ -50,7 +50,7 @@ func TestAllSLmethods(t *testing.T) {
 					code += "a"
 				}
 				_, err := repo.Create(code, title, false)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Code Must not have more than 64 characters")
 			})
 
 			t.Run("Should not Add SL with a title that has more that 64 chars", func(t *testing.T) {
@@ -59,7 +59,7 @@ func TestAllSLmethods(t *testing.T) {
 					title += "a"
 				}
 				_, err := repo.Create(code, title, false)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Title Must not have more than 64 characters")
 			})
 
 			t.Run("Should be Able to add a SL with code that has 64 persian chars", func(t *testing.T) {
@@ -101,7 +101,7 @@ func TestAllSLmethods(t *testing.T) {
 				assert.Nil(t, err)
 
 				_, err = repo.Create(code, title+"new", false)
-				assert.NotNil(t, err)
+				assert.Contains(t, err.Error(), fmt.Sprintf("code=%s already exists", code))
 			})
 
 			t.Run("Shouldn't Add a SL with repetative title", func(t *testing.T) {
@@ -110,7 +110,7 @@ func TestAllSLmethods(t *testing.T) {
 				assert.Nil(t, err)
 
 				_, err = repo.Create(code+"new", title, false)
-				assert.NotNil(t, err)
+				assert.Contains(t, err.Error(), fmt.Sprintf("title=%s already exists", title))
 			})
 
 		})
@@ -144,6 +144,7 @@ func TestAllSLmethods(t *testing.T) {
 
 				err := repo.Update(SL.ID, newSL)
 				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Code cannot be nil")
 			})
 
 			t.Run("Shouldnt Update SL Title to empty string", func(t *testing.T) {
@@ -155,7 +156,7 @@ func TestAllSLmethods(t *testing.T) {
 				}
 
 				err := repo.Update(SL.ID, newSL)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Title cannot be nil")
 			})
 
 			t.Run("Shouldnt Update SL code to string with more than 64 chars", func(t *testing.T) {
@@ -171,7 +172,7 @@ func TestAllSLmethods(t *testing.T) {
 				}
 
 				err := repo.Update(SL.ID, newSL)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Code Must not have more than 64 characters")
 			})
 
 			t.Run("Shouldnt Update SL title to string with more than 64 chars", func(t *testing.T) {
@@ -187,7 +188,7 @@ func TestAllSLmethods(t *testing.T) {
 				}
 
 				err := repo.Update(SL.ID, newSL)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Title Must not have more than 64 characters")
 			})
 
 			t.Run("Shouldnt Update SL code to sth repetetive", func(t *testing.T) {
@@ -202,10 +203,10 @@ func TestAllSLmethods(t *testing.T) {
 				}
 
 				err := repo.Update(SL.ID, newSL)
-				assert.NotNil(t, err)
+				assert.Contains(t, err.Error(), fmt.Sprintf("code=%s already exists", firstSL.Code))
 			})
 
-			t.Run("Shouldnt Update SL titel to sth repetetive", func(t *testing.T) {
+			t.Run("Shouldnt Update SL title to sth repetetive", func(t *testing.T) {
 				firstSL := &models.SL{}
 				repo.db.Model(&models.SL{}).First(firstSL)
 
@@ -217,7 +218,7 @@ func TestAllSLmethods(t *testing.T) {
 				}
 
 				err := repo.Update(SL.ID, newSL)
-				assert.NotNil(t, err)
+				assert.Contains(t, err.Error(), fmt.Sprintf("title=%s already exists", firstSL.Title))
 			})
 
 			t.Run("should update to a valid state", func(t *testing.T) {
@@ -251,8 +252,8 @@ func TestAllSLmethods(t *testing.T) {
 					},
 				}
 
-				assert.NotNil(t, repo.Update(sl1_id, validsl))
-				assert.NotNil(t, repo.Update(sl2_id, validsl))
+				assert.Contains(t, repo.Update(sl1_id, validsl).Error(), "it is referenced")
+				assert.Contains(t, repo.Update(sl1_id, validsl).Error(), "it is referenced")
 
 				revert_scenario1(repo.db, sl1_id, sl2_id, dl_id, v_id)
 			})

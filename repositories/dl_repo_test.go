@@ -91,13 +91,13 @@ func TestAllDLmethods(t *testing.T) {
 			t.Run("Should not Add DL with empty code", func(t *testing.T) {
 				code, title = "", fmt.Sprintf("%d", time.Now().UnixNano())
 				_, err := repo.Create(code, title)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Code cannot be nil")
 			})
 
 			t.Run("Should not Add DL with empty title", func(t *testing.T) {
 				code, title = fmt.Sprintf("%d", time.Now().UnixNano()), ""
 				_, err := repo.Create(code, title)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Title cannot be nil")
 			})
 
 			t.Run("Should not Add DL with a code that has more that 64 chars", func(t *testing.T) {
@@ -106,7 +106,7 @@ func TestAllDLmethods(t *testing.T) {
 					code += "a"
 				}
 				_, err := repo.Create(code, title)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Code Must not have more than 64 characters")
 			})
 
 			t.Run("Should not Add DL with a title that has more that 64 chars", func(t *testing.T) {
@@ -115,7 +115,7 @@ func TestAllDLmethods(t *testing.T) {
 					title += "a"
 				}
 				_, err := repo.Create(code, title)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Title Must not have more than 64 characters")
 			})
 
 			t.Run("Should be Able to add a DL with code that has 64 persian chars", func(t *testing.T) {
@@ -155,7 +155,7 @@ func TestAllDLmethods(t *testing.T) {
 				assert.Nil(t, err)
 
 				_, err = repo.Create(code, title+"new")
-				assert.NotNil(t, err)
+				assert.Contains(t, err.Error(), fmt.Sprintf("code=%s already exists", code))
 			})
 
 			t.Run("Shouldn't Add a DL with repetative title", func(t *testing.T) {
@@ -164,7 +164,7 @@ func TestAllDLmethods(t *testing.T) {
 				assert.Nil(t, err)
 
 				_, err = repo.Create(code+"new", title)
-				assert.NotNil(t, err)
+				assert.Contains(t, err.Error(), fmt.Sprintf("title=%s already exists", title))
 			})
 
 		})
@@ -195,7 +195,7 @@ func TestAllDLmethods(t *testing.T) {
 				}
 
 				err := repo.Update(dl.ID, newdl)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Code cannot be nil")
 			})
 
 			t.Run("Shouldnt Update DL Title to empty string", func(t *testing.T) {
@@ -205,7 +205,7 @@ func TestAllDLmethods(t *testing.T) {
 				}
 
 				err := repo.Update(dl.ID, newdl)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Title cannot be nil")
 			})
 
 			t.Run("Shouldnt Update DL code to string with more than 64 chars", func(t *testing.T) {
@@ -219,7 +219,7 @@ func TestAllDLmethods(t *testing.T) {
 				}
 
 				err := repo.Update(dl.ID, newdl)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Code Must not have more than 64 characters")
 			})
 
 			t.Run("Shouldnt Update DL title to string with more than 64 chars", func(t *testing.T) {
@@ -233,7 +233,7 @@ func TestAllDLmethods(t *testing.T) {
 				}
 
 				err := repo.Update(dl.ID, newdl)
-				assert.NotNil(t, err)
+				assert.Equal(t, err.Error(), "Title Must not have more than 64 characters")
 			})
 
 			t.Run("Shouldnt Update DL code to sth repetetive", func(t *testing.T) {
@@ -246,7 +246,7 @@ func TestAllDLmethods(t *testing.T) {
 				}
 
 				err := repo.Update(dl.ID, newdl)
-				assert.NotNil(t, err)
+				assert.Contains(t, err.Error(), fmt.Sprintf("code=%s already exists", firstdl.Code))
 			})
 
 			t.Run("Shouldnt Update DL titel to sth repetetive", func(t *testing.T) {
@@ -259,7 +259,7 @@ func TestAllDLmethods(t *testing.T) {
 				}
 
 				err := repo.Update(dl.ID, newdl)
-				assert.NotNil(t, err)
+				assert.Contains(t, err.Error(), fmt.Sprintf("title=%s already exists", firstdl.Title))
 			})
 
 			t.Run("should update to a valid state", func(t *testing.T) {
@@ -304,7 +304,7 @@ func TestAllDLmethods(t *testing.T) {
 					Title: title,
 				}
 				err := repo.Update(dl.ID, newdl)
-				assert.NotNil(t, err)
+				assert.Contains(t, err.Error(), "version mismatch")
 
 				newdl.Version = 1
 				err = repo.Update(dl.ID, newdl)
@@ -316,7 +316,7 @@ func TestAllDLmethods(t *testing.T) {
 					Title: title,
 				}
 				err = repo.Update(dl.ID, newdl)
-				assert.NotNil(t, err)
+				assert.Contains(t, err.Error(), "version mismatch")
 
 				newdl.Version = 2
 				err = repo.Update(dl.ID, newdl)
@@ -328,7 +328,7 @@ func TestAllDLmethods(t *testing.T) {
 					Title: title,
 				}
 				err = repo.Update(dl.ID, newdl)
-				assert.NotNil(t, err)
+				assert.Contains(t, err.Error(), "version mismatch")
 
 			})
 
@@ -385,7 +385,7 @@ func TestAllDLmethods(t *testing.T) {
 			t.Run("Shouldnt Delete a DL that is referenced by a vi", func(t *testing.T) {
 				sl1_id, sl2_id, dl_id, v_id := scenario1(repo.db)
 
-				assert.NotNil(t, repo.Delete(dl_id))
+				assert.Contains(t, repo.Delete(dl_id).Error(), "it is referenced")
 
 				revert_scenario1(repo.db, sl1_id, sl2_id, dl_id, v_id)
 			})
