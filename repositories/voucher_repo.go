@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 type VoucherRepository struct {
@@ -83,27 +82,11 @@ func (dr *VoucherRepository) Update(id uint, v *models.Voucher) error {
 
 	// 2- fetch the voucher that needs to be updated
 	fetchedV := models.Voucher{}
-
 	if err := dr.db.Model(&models.Voucher{}).Preload("Items").First(&fetchedV, "id = ?", id).Error; err != nil {
 		return err
 	}
 
-	// if fetchedV.Number != v.Number {
-	// 	// 4- Check if there are any references to this sl:
-	// 	var count int64
-	// 	err := dr.db.Model(&models.Voucher{}).Where("Number = ?", v.Number).Count(&count).Error
-	// 	// (SQLSTATE 42P01) : table voucheritem does not even exist
-	// 	if err != nil && !strings.Contains(err.Error(), "42P01") {
-	// 		return err
-	// 	}
-
-	// 	// If there are any references, raise an error
-	// 	if count > 0 {
-	// 		return fmt.Errorf("cannot update SL: it is referenced by %d Voucheritem(s)", count)
-	// 	}
-	// }
-
-	// 3- Row Version:
+	// 3- Handle Row Versioning:
 	if fetchedV.Version != v.Version {
 		return fmt.Errorf("version mismatch: expected %d but found %d", fetchedV.Version, v.Version)
 	}
@@ -122,10 +105,7 @@ func (dr *VoucherRepository) Update(id uint, v *models.Voucher) error {
 		vi.VoucherID = fetchedV.ID
 		var fetchedVI models.Voucheritem
 
-		// silent the gorm logger cz its ok if the id is not found:
-		silentsession := dr.db.Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)})
-
-		if err := silentsession.Model(&models.Voucheritem{}).First(&fetchedVI, "id = ?", vi.ID).Error; err != nil {
+		if err := dr.db.Model(&models.Voucheritem{}).First(&fetchedVI, "id = ?", vi.ID).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
 
 				if err1 := viRepo.ValidateVoucherItem(&vi); err1 != nil {
@@ -160,19 +140,14 @@ func (dr *VoucherRepository) Update(id uint, v *models.Voucher) error {
 		}
 
 	}
-	// for k, vis := range vis_partitioned {
-	// 	fmt.Println(k, ":")
-	// 	for _, vi := range vis {
-	// 		fmt.Println("\t", vi)
-	// 	}
-	// }
+
 	if sum_debit != sum_credit {
 		return fmt.Errorf("requested update will result in an unbalanced voucher:\tsum_debit: %v\tsum_credit: %v", sum_debit, sum_credit)
 	}
 
 	newlen := len(fetchedV.Items) + len(vis_partitioned["toInsert"]) - len(vis_partitioned["toDelete"])
 	if newlen < 2 || newlen > 500 {
-		return fmt.Errorf("voucher will have unacceptable number of voucheritems. expected between [2, 500], got %v", newlen)
+		return fmt.Errorf("this update results in unacceptable number of voucheritems. expected between [2, 500], got %v", newlen)
 	}
 
 	// 6- Apply all changes, if any of them failed, rollback
