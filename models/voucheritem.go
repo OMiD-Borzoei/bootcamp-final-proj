@@ -15,14 +15,15 @@ type Voucheritem struct {
 	Credit    uint32
 }
 
+// non-DB validation:
 func (vi *Voucheritem) Validate() error {
 	if vi.Debit > 0 && vi.Credit > 0 {
 		return fmt.Errorf("one of the credit or debit must be 0")
 	}
-
 	return nil
 }
 
+// return a supposably valid vi, or err.
 func NewVoucherItem(VoucherID uint, sl uint, dl *uint, debit, credit uint32) (*Voucheritem, error) {
 	newvoucheritem := Voucheritem{
 		VoucherID: VoucherID,

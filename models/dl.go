@@ -6,6 +6,7 @@ import (
 
 const STRING_LIMIT = 64
 
+// if string has more that STRING_LIMIT character return err
 func ValidateSize(inp, variable string) error {
 	if len([]rune(inp)) > STRING_LIMIT {
 		return fmt.Errorf("%s Must not have more than %v characters", variable, STRING_LIMIT)
@@ -13,6 +14,7 @@ func ValidateSize(inp, variable string) error {
 	return nil
 }
 
+// if string is empty return err
 func ValidateEmpty(inp, variable string) error {
 	if inp == "" {
 		return fmt.Errorf("%s cannot be nil", variable)
@@ -20,6 +22,7 @@ func ValidateEmpty(inp, variable string) error {
 	return nil
 }
 
+// check both emptiness and characters of a string
 func ValidateString(inp string, variable string) error {
 	if err := ValidateSize(inp, variable); err != nil {
 		return err
@@ -32,11 +35,12 @@ func ValidateString(inp string, variable string) error {
 
 type DL struct {
 	ID      uint   `gorm:"primaryKey"`
-	Code    string `gorm:"unique"`
-	Title   string `gorm:"unique"`
+	Code    string `gorm:"unique"` // Repetetive Code is handled in DB
+	Title   string `gorm:"unique"` // Repetetive Title is handled in DB
 	Version uint
 }
 
+// non-DB Validation:
 func (dl *DL) Validate() error {
 
 	if dl == nil {
@@ -54,6 +58,7 @@ func (dl *DL) Validate() error {
 	return nil
 }
 
+// return a new valid DL, or err.
 func NewDL(code string, title string) (*DL, error) {
 	newdl := DL{
 		Code:    code,

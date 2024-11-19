@@ -43,6 +43,7 @@ func (dr *SLRepository) ReadAll() ([]models.SL, error) {
 }
 
 func (dr *SLRepository) ReadByCode(code string) (*models.SL, error) {
+	// No need to use DB if code ain't Valid:
 	if err := models.ValidateString(code, "Code"); err != nil {
 		return nil, err
 	}
@@ -54,6 +55,7 @@ func (dr *SLRepository) ReadByCode(code string) (*models.SL, error) {
 }
 
 func (dr *SLRepository) ReadByTitle(title string) (*models.SL, error) {
+	// No need to use DB if title ain't Valid:
 	if err := models.ValidateString(title, "Title"); err != nil {
 		return nil, err
 	}
@@ -104,6 +106,30 @@ func (dr *SLRepository) Delete(id uint) error {
 	err := dr.db.Model(&models.SL{}).Delete("id = ?", id).Error
 	if err != nil && strings.Contains(err.Error(), "23503") {
 		return fmt.Errorf("can't delete SL with id = %d cz it is referenced", id)
+	}
+	return err
+}
+
+func (dr *SLRepository) DeleteByCode(code string) error {
+	// No need to use DB if code ain't Valid:
+	if err := models.ValidateString(code, "Code"); err != nil {
+		return err
+	}
+	err := dr.db.Model(&models.SL{}).Delete("code = ?", code).Error
+	if err != nil && strings.Contains(err.Error(), "23503") {
+		return fmt.Errorf("can't delete SL with code = %s cz it is referenced", code)
+	}
+	return err
+}
+
+func (dr *SLRepository) DeleteByTitle(title string) error {
+	// No need to use DB if title ain't Valid:
+	if err := models.ValidateString(title, "Title"); err != nil {
+		return err
+	}
+	err := dr.db.Model(&models.SL{}).Delete("title = ?", title).Error
+	if err != nil && strings.Contains(err.Error(), "23503") {
+		return fmt.Errorf("can't delete SL with title = %s cz it is referenced", title)
 	}
 	return err
 }

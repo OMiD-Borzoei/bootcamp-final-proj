@@ -53,11 +53,18 @@ func (dr *VoucherRepository) Read(id uint) (*models.Voucher, error) {
 		return nil, err
 	}
 
-	//Print the Voucher items
-	// fmt.Printf("Voucher: %s, Version: %d\n", voucher.Number, voucher.Version)
-	// for _, item := range voucher.Items {
-	// 	fmt.Printf("Voucheritem ID: %d, SLID: %d, DLID: %v Debit: %d, Credit: %d\n", item.ID, item.SLID, item.DLID, item.Debit, item.Credit)
-	// }
+	return &voucher, nil
+}
+
+func (dr *VoucherRepository) ReadByNumber(number string) (*models.Voucher, error) {
+
+	var voucher models.Voucher
+	// Load the Voucher along with its associated Voucheritems
+	err := dr.db.Preload("Items").First(&voucher, "number = ?", number).Error
+	if err != nil {
+		return nil, err
+	}
+
 	return &voucher, nil
 }
 
@@ -206,4 +213,8 @@ func (dr *VoucherRepository) Update(id uint, v *models.Voucher) error {
 
 func (dr *VoucherRepository) Delete(id uint) error {
 	return dr.db.Model(&models.Voucher{}).Delete("id = ?", id).Error
+}
+
+func (dr *VoucherRepository) DeleteByNumber(number string) error {
+	return dr.db.Model(&models.Voucher{}).Delete("number = ?", number).Error
 }

@@ -43,6 +43,7 @@ func (dr *DLRepository) ReadAll() ([]models.DL, error) {
 }
 
 func (dr *DLRepository) ReadByCode(code string) (*models.DL, error) {
+	// No need to use DB if code ain't Valid:
 	if err := models.ValidateString(code, "Code"); err != nil {
 		return nil, err
 	}
@@ -54,6 +55,7 @@ func (dr *DLRepository) ReadByCode(code string) (*models.DL, error) {
 }
 
 func (dr *DLRepository) ReadByTitle(title string) (*models.DL, error) {
+	// No need to use DB if title ain't Valid:
 	if err := models.ValidateString(title, "Title"); err != nil {
 		return nil, err
 	}
@@ -82,8 +84,7 @@ func (dr *DLRepository) Update(id uint, newDL *models.DL) error {
 	}
 
 	// 4- Update:
-	newDL.ID = dl.ID
-	newDL.Version = dl.Version + 1
+	newDL.ID, newDL.Version = dl.ID, dl.Version+1
 	return dr.db.Model(&models.SL{}).Where("id = ?", id).Save(newDL).Error
 }
 
@@ -91,6 +92,32 @@ func (dr *DLRepository) Delete(id uint) error {
 	err := dr.db.Model(&models.DL{}).Delete("id = ?", id).Error
 	if err != nil && strings.Contains(err.Error(), "23503") {
 		return fmt.Errorf("can't delete DL with id = %d cz it is referenced", id)
+	}
+	return err
+}
+
+func (dr *DLRepository) DeleteByCode(code string) error {
+	// No need to use DB if code ain't Valid:
+	if err := models.ValidateString(code, "Code"); err != nil {
+		return err
+	}
+
+	err := dr.db.Model(&models.DL{}).Delete("code = ?", code).Error
+	if err != nil && strings.Contains(err.Error(), "23503") {
+		return fmt.Errorf("can't delete DL with code = %s cz it is referenced", code)
+	}
+	return err
+}
+
+func (dr *DLRepository) DeleteByTitle(title string) error {
+	// No need to use DB if code ain't Valid:
+	if err := models.ValidateString(title, "Title"); err != nil {
+		return err
+	}
+
+	err := dr.db.Model(&models.DL{}).Delete("title = ?", title).Error
+	if err != nil && strings.Contains(err.Error(), "23503") {
+		return fmt.Errorf("can't delete DL with title = %s cz it is referenced", title)
 	}
 	return err
 }

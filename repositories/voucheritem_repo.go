@@ -15,6 +15,7 @@ func NewVoucherItemRepository(db *gorm.DB) *VoucherItemRepository {
 	return &VoucherItemRepository{db: db}
 }
 
+// we need this method cz given SLID, DLID and VoucherID must exist in DB and we must check them.
 func (dr *VoucherItemRepository) ValidateVoucherItem(vi *models.Voucheritem) error {
 	if err := vi.Validate(); err != nil {
 		return err
